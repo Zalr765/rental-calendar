@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+@theme static {
+	--color-blue-50:  #ffffff;	/*Цвет текста*/
+	--color-blue-400: #0dbbce;	/*Цвет Hover*/
+	--color-blue-500: #0097a7;	/*Основной цвет*/
+}
