@@ -1,3 +1,17 @@
+// Обнулить часы-минуты
+const startOfDay = (date: Date) => {
+	const d = new Date(date)
+	d.setHours(0, 0, 0, 0)
+	return d
+}
+
+// Конец дня
+const endOfDay = (date: Date) => {
+	const d = new Date(date)
+	d.setHours(23, 59, 59, 999)
+	return d
+}
+
 export const getDateRange = (date: Date = new Date(), rangeType: 'week' | 'week2' | 'month' = 'week') => {
 	switch (rangeType) {
 		case 'week':
@@ -13,26 +27,26 @@ export const getDateRange = (date: Date = new Date(), rangeType: 'week' | 'week2
 
 const getWeekRange = (date: Date) => {
 	const day = date.getDay();
-	const monday = new Date(date);
+	const monday = startOfDay(new Date(date));
 	monday.setDate(date.getDate() - (day === 0 ? 6 : day - 1));
 
 	const sunday = new Date(monday);
 	sunday.setDate(monday.getDate() + 6);
 
-	return { start: monday, end: sunday };
-	};
+  	return { start: startOfDay(monday), end: endOfDay(sunday) };
+};
 
 const getTwoWeeksRange = (date: Date) => {
 	const { start: monday } = getWeekRange(date);
-	const tuesday = new Date(monday);
-	tuesday.setDate(monday.getDate() + 13);
+	const sunday = new Date(monday);
+	sunday.setDate(monday.getDate() + 13);
 
-	return { start: monday, end: tuesday };
+  return { start: startOfDay(monday), end: endOfDay(sunday) };
 };
 
 const getMonthRange = (date: Date) => {
-	const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
-	const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+	const firstDay = startOfDay(new Date(date.getFullYear(), date.getMonth(), 1));
+	const lastDay = endOfDay(new Date(date.getFullYear(), date.getMonth() + 1, 0));
 
 	return { start: firstDay, end: lastDay };
 };
@@ -74,6 +88,37 @@ export const getDaysInRange = (start: Date, end: Date): Date[] => {
 
 	return days;
 };
+
+export const getDaysAndHoursBetweenDates = (start: Date, end: Date): string => {
+	const diffMs = Math.abs(new Date(end).getTime() - new Date(start).getTime());
+	const totalHours = diffMs / (1000 * 60 * 60);
+
+	const fullDays = Math.floor(totalHours / 24);
+	const remainingHours = Math.round((totalHours % 24) * 10) / 10; // округляем до 1 decimal
+	return formatDaysHours(fullDays, remainingHours);
+}
+
+const formatDaysHours = (days: number, hours: number): string => {
+	if (days === 0 && hours === 0) return '0 часов';
+	if (days === 0) return `${hours} ${getHoursWord(hours)}`;
+	if (hours === 0) return `${days} ${getDaysWord(days)}`;
+
+	return `${days} ${getDaysWord(days)}, ${hours} ${getHoursWord(hours)}`;
+}
+
+const getDaysWord = (days: number): string => {
+	if (days % 10 === 1 && days % 100 !== 11) return 'день';
+	if ([2, 3, 4].includes(days % 10) && ![12, 13, 14].includes(days % 100)) return 'дня';
+	return 'дней';
+}
+
+const getHoursWord = (hours: number): string => {
+	const intHours = Math.floor(hours);
+
+	if (intHours % 10 === 1 && intHours % 100 !== 11) return 'час';
+	if ([2, 3, 4].includes(intHours % 10) && ![12, 13, 14].includes(intHours % 100)) return 'часа';
+	return 'часов';
+}
 
 // Форматирование дня для заголовка таблицы: "Пон (15)"
 export const formatDayForHeader = (date: Date): string => {

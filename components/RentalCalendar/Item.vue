@@ -1,8 +1,17 @@
+<script setup lang="ts">
+const props = defineProps({
+	image: { type: String, required: true },
+	title: { type: String, required: true },
+	price: { type: [String, Number], required: true }
+})
+
+</script>
+
 <template>
 	<div class="rental-calendar-item">
-		<img src="https://dhtmlx.com/docs/products/demoApps/car-rental-html5-js-php/demo/content/dodge_caliber.png" alt="">
-		<h3>Dodge Caliber</h3>
-		<p>$129.99</p>
+		<img :src="props.image" :alt="props.title" />
+		<h3>{{ props.title }}</h3>
+		<p>{{ props.price }}</p>
 	</div>
 </template>
 

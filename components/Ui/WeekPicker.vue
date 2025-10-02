@@ -20,7 +20,7 @@ const changeDate = (direction: 'prev' | 'next') => {
 			newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
 			break;
 		case 'week2':
-			newDate.setDate(newDate.getDate() + (direction === 'next' ? 14 : -14));
+			newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
 			break;
 		case 'month':
 			newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1));

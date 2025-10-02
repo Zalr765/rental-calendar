@@ -31,8 +31,28 @@ export default defineAppConfig({
 		table: {
 			slots: {
 				th: 'text-center',
-				td: 'box-border border border-gray-200 border-collapse',
+				td: 'box-border border border-gray-200 border-collapse relative',
+			},
+			variants: {
+				sticky: {
+					true: {
+						thead: 'z-[2]',
+					}
+				}
 			}
 		},
+
+		tooltip: {
+			slots: {
+				content: 'h-fit'
+			}
+		},
+		formField: {
+			slots: {
+				root: '',
+				wrapper: '',
+				labelWrapper: 'flex',
+			},
+		}
 	}
 })
