@@ -12,8 +12,10 @@ const endOfDay = (date: Date) => {
 	return d
 }
 
-export const getDateRange = (date: Date = new Date(), rangeType: 'week' | 'week2' | 'month' = 'week') => {
+export const getDateRange = (date: Date = new Date(), rangeType:  'day' | 'week' | 'week2' | 'month' = 'week') => {
 	switch (rangeType) {
+		case 'day':
+			return getDayRange(date);
 		case 'week':
 			return getWeekRange(date);
 		case 'week2':
@@ -24,6 +26,11 @@ export const getDateRange = (date: Date = new Date(), rangeType: 'week' | 'week2
 			return getWeekRange(date);
 	}
 };
+
+const getDayRange = (date: Date) => ({
+	start: startOfDay(date),
+	end: endOfDay(date)
+});
 
 const getWeekRange = (date: Date) => {
 	const day = date.getDay();
@@ -61,71 +68,141 @@ export const formatToLocalizedDate = (date: Date,) => {
 
 export const getFormattedDateRange = (
 	date: Date = new Date(),
-		rangeType: 'week' | 'week2' | 'month' = 'week',
+		rangeType: 'day' | 'week' | 'week2' | 'month' = 'week',
 	) => {
 	const { start, end } = getDateRange(date, rangeType);
 	const startFormatted = formatToLocalizedDate(start);
 	const endFormatted = formatToLocalizedDate(end);
+
+	if (rangeType === 'day') {
+		const dayOfWeek = start.toLocaleDateString('ru-RU', { weekday: 'short' });
+		const shortDayName = dayOfWeek.replace('.', '').toLowerCase();
+		return `${shortDayName} ${startFormatted}`;
+	}
 	return `${startFormatted} - ${endFormatted}`;
 };
 
 export const getDateRangeObjects = (
 		date: Date = new Date(),
-		rangeType: 'week' | 'week2' | 'month' = 'week'
+		rangeType: 'day' | 'week' | 'week2' | 'month' = 'week'
 	) => {
 		return getDateRange(date, rangeType);
 };
 
 
-export const getDaysInRange = (start: Date, end: Date): Date[] => {
-	const days: Date[] = [];
+export const getDaysInRange = (
+	start: Date,
+	end: Date,
+	rangeType: 'day' | 'hour' = 'day'
+): Date[] => {
+	const result: Date[] = [];
 	const current = new Date(start);
 
-	while (current <= end) {
-		days.push(new Date(current));
-		current.setDate(current.getDate() + 1);
+	if (rangeType === 'hour') {
+		while (current <= end) {
+			result.push(new Date(current));
+			current.setHours(current.getHours() + 1);
+		}
+	}
+	else {
+		while (current <= end) {
+			result.push(new Date(current));
+			current.setDate(current.getDate() + 1);
+		}
 	}
 
-	return days;
+	return result;
 };
+
 
 export const getDaysAndHoursBetweenDates = (start: Date, end: Date): string => {
 	const diffMs = Math.abs(new Date(end).getTime() - new Date(start).getTime());
 	const totalHours = diffMs / (1000 * 60 * 60);
 
 	const fullDays = Math.floor(totalHours / 24);
-	const remainingHours = Math.round((totalHours % 24) * 10) / 10; // округляем до 1 decimal
+	const remainingHours = Math.round((totalHours % 24) * 10) / 10;
 	return formatDaysHours(fullDays, remainingHours);
 }
 
 const formatDaysHours = (days: number, hours: number): string => {
-	if (days === 0 && hours === 0) return '0 часов';
-	if (days === 0) return `${hours} ${getHoursWord(hours)}`;
-	if (hours === 0) return `${days} ${getDaysWord(days)}`;
+	if (days === 0 && hours === 0)
+		return '0 часов';
+	if (days === 0)
+		return `${hours} ${getHoursWord(hours)}`;
+	if (hours === 0)
+		return `${days} ${getDaysWord(days)}`;
 
 	return `${days} ${getDaysWord(days)}, ${hours} ${getHoursWord(hours)}`;
 }
 
 const getDaysWord = (days: number): string => {
-	if (days % 10 === 1 && days % 100 !== 11) return 'день';
-	if ([2, 3, 4].includes(days % 10) && ![12, 13, 14].includes(days % 100)) return 'дня';
+	if (days % 10 === 1 && days % 100 !== 11)
+		return 'день';
+	if ([2, 3, 4].includes(days % 10) && ![12, 13, 14].includes(days % 100))
+		return 'дня';
 	return 'дней';
 }
 
 const getHoursWord = (hours: number): string => {
 	const intHours = Math.floor(hours);
 
-	if (intHours % 10 === 1 && intHours % 100 !== 11) return 'час';
-	if ([2, 3, 4].includes(intHours % 10) && ![12, 13, 14].includes(intHours % 100)) return 'часа';
+	if (intHours % 10 === 1 && intHours % 100 !== 11)
+		return 'час';
+	if ([2, 3, 4].includes(intHours % 10) && ![12, 13, 14].includes(intHours % 100))
+		return 'часа';
 	return 'часов';
 }
 
 // Форматирование дня для заголовка таблицы: "Пон (15)"
-export const formatDayForHeader = (date: Date): string => {
+export const formatTimeForHeader = (date: Date, mode: 'day' | 'hour' = 'day'): string => {
+
+	if (mode === 'hour') {
+		return date.toLocaleTimeString('ru-RU', {
+			hour: '2-digit',
+			hour12: false,
+		})
+	}
+
 	const weekday = date.toLocaleDateString('ru-RU', { weekday: 'short' });
 	const day = date.getDate();
 	return `${capitalizeFirstLetter(weekday)}\n${day}`;
 };
+
+export const toLocalDateTime = (date: string) => {
+  if (!date) return ''
+  const d = new Date(date)
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+  return local.toISOString().slice(0, 16)
+}
+
+export const formatForDatetimeLocal = (date: Date): string => {
+	const year = date.getFullYear()
+	const month = String(date.getMonth() + 1).padStart(2, '0')
+	const day = String(date.getDate()).padStart(2, '0')
+	const hours = String(date.getHours()).padStart(2, '0')
+	const minutes = String(date.getMinutes()).padStart(2, '0')
+	return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
+export const roundToNext10Minutes = (dateStr: string)=> {
+	if (!dateStr) return ''
+	const date = new Date(dateStr)
+	if (isNaN(date.getTime())) return dateStr
+
+	const minutes = date.getMinutes()
+	const rounded = Math.ceil(minutes / 10) * 10
+
+	if (rounded === 60) {
+		date.setHours(date.getHours() + 1)
+		date.setMinutes(0)
+	}
+	else
+		date.setMinutes(rounded)
+
+	date.setSeconds(0)
+	date.setMilliseconds(0)
+	return formatForDatetimeLocal(date)
+}
 
 const capitalizeFirstLetter = (s: string) =>
 	s.charAt(0).toUpperCase() + s.slice(1);

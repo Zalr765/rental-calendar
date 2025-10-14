@@ -25,4 +25,4 @@ export const useRentalPopup = (modelValue?: Ref<boolean>) => {
 	}
 
 	return { open, stuff, item, actionType, openPopup, closePopup }
-	}
+}

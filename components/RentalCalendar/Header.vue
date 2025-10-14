@@ -8,13 +8,17 @@ const activeTab = defineModel('activeTab');
 
 const tabs = [
 	{
+		title: 'ДЕНЬ',
+		value: 'day',
+	},
+	{
 		title: 'НЕДЕЛЯ',
 		value: 'week',
 	},
-	{
-		title: '2 НЕДЕЛИ',
-		value: 'week2',
-	},
+	// {
+	// 	title: '2 НЕДЕЛИ',
+	// 	value: 'week2',
+	// },
 	{
 		title: 'МЕСЯЦ',
 		value: 'month',

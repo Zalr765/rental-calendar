@@ -1,4 +1,6 @@
 const MS_IN_HOUR = 1000 * 60 * 60;
+const MS_IN_MINUTE = 1000 * 60;
+const MS_IN_DAY = 1000 * 60 * 60 * 24;
 
 export const useResize = (
 	items: Ref<any[]>,
@@ -61,35 +63,49 @@ export const useResize = (
 
 		const rangeStartMs = new Date(props.range.start).getTime()
 		const rangeEndMs   = new Date(props.range.end).getTime() + 1
-		const hourPx	   = cellWidth.value / 24
-		if (!hourPx)
+		const rangeDuration = rangeEndMs - rangeStartMs
+		const isSingleDay = rangeDuration < MS_IN_DAY * 1.1
+
+		const stepMs   = isSingleDay ? 10 * MS_IN_MINUTE : MS_IN_HOUR
+		const unitPx   = isSingleDay ? cellWidth.value / 6 : cellWidth.value / 24
+		if (!unitPx)
 			return
 
-		const hoursMoved = Math.round((e.clientX - resizeStartX) / hourPx)
-		if (hoursMoved === accumHours) return
+		const stepsMoved = Math.round((e.clientX - resizeStartX) / unitPx)
+		if (stepsMoved === accumHours)
+			return
 
-		const startMs  = new Date(src.start).getTime()
-		const minEndMs = Math.max(startMs + MS_IN_HOUR, rangeStartMs + MS_IN_HOUR)
-		let newEndMs   = baseEndMs + hoursMoved * MS_IN_HOUR
+		const startMs = new Date(src.start).getTime()
+		let newEndMs  = baseEndMs + stepsMoved * stepMs
+
+		const MIN_BLOCK_MS = MS_IN_HOUR
+		const minEndMs = Math.max(startMs + MIN_BLOCK_MS, rangeStartMs + MIN_BLOCK_MS)
 
 		if (newEndMs < minEndMs) {
 			if (startMs < rangeStartMs)
 				newEndMs = minEndMs
 			else {
-				const deltaMs    = minEndMs - newEndMs
+				const deltaMs = minEndMs - newEndMs
 				const newStartMs = Math.max(rangeStartMs, startMs - deltaMs)
-
 				newEndMs  = new Date(src.end).getTime()
 				src.start = new Date(newStartMs).toISOString()
 			}
 		}
-
-		if (newEndMs > rangeEndMs)
-			newEndMs = rangeEndMs
+		if (newEndMs > rangeEndMs) {
+			if (isSingleDay) {
+				const end = new Date(rangeEndMs)
+				end.setDate(end.getDate() + 1)
+				end.setHours(0, 0, 0, 0)
+				newEndMs = end.getTime()
+			}
+			else
+				newEndMs = rangeEndMs
+		}
 
 		src.end = new Date(newEndMs).toISOString()
-		accumHours = hoursMoved
+		accumHours = stepsMoved
 	}
+
 
 	const onResizeUp = () => {
 			if (resizingSrcIndex.value !== null) {

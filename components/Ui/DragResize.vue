@@ -18,7 +18,8 @@ const props = defineProps({
 })
 
 // Varobales
-const MS_IN_DAY = 1000 * 60 * 60 * 24
+const MS_IN_HOUR = 1000 * 60 * 60
+const MS_IN_DAY  = 1000 * 60 * 60 * 24
 
 const stuff = computed(() => props.row?.getValue('stuff'))
 
@@ -28,15 +29,17 @@ const cellWidth = computed(() => {
 
 	const start = new Date(props.range.start)
 	const end = new Date(props.range.end)
-	const days = (end.getTime() - start.getTime()) / MS_IN_DAY
+	const days = (end.getTime() - start.getTime()) / MS_IN_DAY;
+	const isSingleDay = new Date(props.range.start).toDateString() === new Date(props.range.end).toDateString();
 
+	if(isSingleDay)
+		return 40.27
 	if (days <= 7)
 		return 142.8
 	if (days <= 14)
 		return 71.4
 	return 33.3
 })
-
 
 const items = computed(() => {
 	if (!stuff.value)
@@ -45,14 +48,22 @@ const items = computed(() => {
 	const rangeEnd   = new Date(props.range.end)
 
 	return (stuff.value.dates || []).map((date: any, srcIndex: number) => {
-		const dateStart = new Date(date.start)
-		const dateEnd   = new Date(date.end || date.start)
+		const dateStart = new Date(date.start);
+		const dateEnd   = new Date(date.end || date.start);
+		const isSingleDay = new Date(props.range.start).toDateString() === new Date(props.range.end).toDateString();
+
 
 		if (dateEnd < rangeStart || dateStart > rangeEnd)
 			return null
 
-		const left = ((Math.max(dateStart.getTime(), rangeStart.getTime()) - rangeStart.getTime()) / MS_IN_DAY) * cellWidth.value
-		let width  = ((Math.min(dateEnd.getTime(), rangeEnd.getTime()) - Math.max(dateStart.getTime(), rangeStart.getTime())) / MS_IN_DAY) * cellWidth.value
+		const unit = isSingleDay ? MS_IN_HOUR : MS_IN_DAY
+
+		const startTime = Math.max(dateStart.getTime(), rangeStart.getTime())
+		const endTime   = Math.min(dateEnd.getTime(), rangeEnd.getTime())
+
+		const left = ((startTime - rangeStart.getTime()) / unit) * cellWidth.value;
+		let width  = ((endTime - startTime) / unit) * cellWidth.value;
+
 		if (width < 2)
 			width = 2
 
@@ -68,6 +79,32 @@ const items = computed(() => {
 			top: typeof date.__top === 'number' ? date.__top : 40,
 		}
 	}).filter(Boolean)
+})
+
+const todayLineLeft = computed(() => {
+	if (!props.range?.start || !props.range?.end)
+		return null
+
+	const rangeStart = new Date(props.range.start)
+	const rangeEnd = new Date(props.range.end)
+	const today = new Date();
+
+	today.setSeconds(0);
+	today.setMilliseconds(0);
+
+
+	// Проверяем, входит ли сегодня в диапазон
+	if (today < rangeStart || today > rangeEnd)
+		return null
+
+	const rangeDuration = rangeEnd.getTime() - rangeStart.getTime()
+	const isSingleDay = rangeDuration < MS_IN_DAY * 1.1
+
+	const offsetMs = today.getTime() - rangeStart.getTime()
+	const unit = isSingleDay ? MS_IN_HOUR : MS_IN_DAY
+	const left = (offsetMs / unit) * cellWidth.value
+
+	return left
 })
 
 // emits
@@ -120,6 +157,11 @@ const reference = computed(() => ({
 		@mousedown="onContainerDown"
 		@mouseenter="onContainerEnter"
 	>
+		<div
+			v-if="todayLineLeft !== null"
+			class="ui-drag-resize__today-line"
+			:style="{ left: todayLineLeft + 'px' }"
+		/>
 		<UTooltip
 			v-for="(item, i) in items"
 			:key="i"
@@ -160,6 +202,7 @@ const reference = computed(() => ({
 	height: 119px;
 	width: 1000px;
 	top: 0;
+	left: 0;
 	z-index: 1;
 }
 .ui-drag-resize__item
@@ -221,5 +264,16 @@ const reference = computed(() => ({
 	border-radius: 4px;
 	box-sizing: border-box;
 	pointer-events: none;
+}
+
+.ui-drag-resize__today-line
+{
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 2px;
+	background-color: red;
+	opacity: 0.8;
+	z-index: 10;
 }
 </style>

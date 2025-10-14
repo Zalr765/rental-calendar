@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Types
-export type Range = 'week' | 'week2' | 'month'
+export type Range = 'day' | 'week' | 'week2' | 'month'
 
 // Props
 const props = defineProps<{
@@ -16,6 +16,9 @@ const changeDate = (direction: 'prev' | 'next') => {
 	const newDate = new Date(localDate.value);
 
 	switch (props.range) {
+		case 'day':
+			newDate.setDate(newDate.getDate() + (direction === 'next' ? 1 : -1))
+			break
 		case 'week':
 			newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
 			break;

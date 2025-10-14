@@ -75,21 +75,17 @@ function normalizeDate(date: string | Date | undefined | null) {
 
 
 const onDelete = ({ stuffName, item }: { stuffName: string; item: any }) => {
-  const target = data.value.find((d: any) => d.stuff.name === stuffName)
-  if (!target) return
+	const target = data.value.find((d: any) => d.stuff.name === stuffName)
+	if (!target)
+		return
 
-  const idx = target.stuff.dates.findIndex(
-    (d: any) =>
-      normalizeDate(d.start) === normalizeDate(item.start) &&
-      normalizeDate(d.end) === normalizeDate(item.end)
-  )
+	const idx = target.stuff.dates.findIndex( (d: any) =>
+		normalizeDate(d.start) === normalizeDate(item.start) &&
+		normalizeDate(d.end) === normalizeDate(item.end)
+	)
 
-  if (idx !== -1) {
-    target.stuff.dates.splice(idx, 1)
-    console.log(`Удалена бронь у ${stuffName}:`, normalizeDate(item.start), normalizeDate(item.end))
-  } else {
-    console.warn("Не нашли элемент для удаления", item)
-  }
+	if (idx !== -1)
+		target.stuff.dates.splice(idx, 1)
 }
 
 
@@ -120,7 +116,7 @@ const columns = computed(() =>
 <template>
 	<div class="rental-calendar-table">
 		<UTable
-			class="flex-1 max-h-[410px] border-collapse z-10"
+			class="flex-1 max-h-[527px] border-collapse z-10"
 			sticky
 			:data="data"
 			:columns="columns"

@@ -1,50 +1,160 @@
 <script setup lang="ts">
-import type { RadioGroupItem, FormSubmitEvent } from '@nuxt/ui'
+import type { RadioGroupItem, FormSubmitEvent, FormError } from '@nuxt/ui'
+import { vMaska } from 'maska/vue'
 
+// Props
 const props = defineProps<{
-  data: any,
-  stuff: any,
-  item: any,
-  action: string
+	data: any,
+	stuff: any,
+	item: any,
+	action: string | null
 }>()
 
+// Const
+const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+const MIN_DIMENSIONS = { width: 200, height: 200 }
+const MAX_DIMENSIONS = { width: 4096, height: 4096 }
+
+// Func
+const createObjectUrl = (file: File) => URL.createObjectURL(file);
+const checkImageDimensions = (file: File) => {
+	return new Promise<boolean>((resolve) => {
+		const reader = new FileReader()
+		reader.onload = (e) => {
+			const img = new Image()
+			img.onload = () => {
+				const valid =
+					img.width >= MIN_DIMENSIONS.width &&
+					img.height >= MIN_DIMENSIONS.height &&
+					img.width <= MAX_DIMENSIONS.width &&
+					img.height <= MAX_DIMENSIONS.height
+				resolve(valid)
+			}
+			img.src = e.target?.result as string
+		}
+		reader.readAsDataURL(file)
+	})
+}
+
+const handleDateInput = (key: 'startDate' | 'endDate', value: string) => {
+	state[key] = roundToNext10Minutes(value)
+}
+
+// Emits
 const emit = defineEmits<{
-  (e: 'closePopup'): void
-  (e: 'delete', payload: { stuffName: string; item: any }): void
+	(e: 'closePopup'): void
+	(e: 'delete', payload: { stuffName: string; item: any }): void
 }>()
+
 const { showError } = useAppToast()
 
-// Опции выбора
+// Options
 const stuffOptions = computed(() =>
-  (props.data || []).map(d => ({
-    label: d.stuff.title,
-    value: d.stuff.name
-  }))
+	(props.data || []).map((d: any) => ({
+		label: d.stuff.title,
+		value: d.stuff.name
+	}))
 )
 
 const statusOptions: RadioGroupItem[] = [
-  { label: 'Reservation', value: 'reservation' },
-  { label: 'Prepaid', value: 'prepaid' },
-  { label: '100% payment', value: 'full' }
+	{ label: 'Предоплата', value: 'prepaid' },
+	{ label: 'Аванс', value: 'advance' },
+	{ label: 'Оплачен', value: 'paid' }
 ]
 
-// Состояние формы
+const clientOptions: RadioGroupItem[] = [
+	{ label: 'Клиент 1', value: 'client1' },
+	{ label: 'Клиент 2', value: 'client2' },
+	{ label: 'Клиент 3', value: 'client3' },
+]
+
+// Form state
 const state = reactive({
-  name: props.item?.name ?? '',
-  stuff: props.stuff?.name ?? '',
-  status: props.item?.status ?? 'reservation',
-  startDate: props.item?.start ?? '',
-  endDate: props.item?.end ?? ''
+	channel: props.item?.channel ?? '',
+	name: props.item?.name ?? '',
+	client: props.item?.client ?? '',
+	phone: props.item?.phone ?? '+7',
+	secondaryContact: props.item?.secondaryContact ?? '',
+	address: props.item?.address ?? '',
+	delivery: props.item?.delivery ?? '',
+	discount: props.item?.discount ?? '',
+	deposit: props.item?.deposit ?? '',
+	pic: props.item?.pic ?? '',
+	kitNotes: props.item?.kitNotes ?? '',
+	stuff: props.stuff?.name ?? '',
+	status: props.item?.status ?? 'prepaid',
+	startDate: toLocalDateTime(props.item?.start ?? ''),
+	endDate: toLocalDateTime(props.item?.end ?? '')
 })
 
+// Form ref
+const formRef = ref<any>(null)
+
+const validate = (state: any): FormError[] => {
+	const errors: FormError[] = []
+
+	if (!state.channel)
+		errors.push({ name: 'channel', message: 'Укажите канал продаж' })
+	if (!state.name)
+		errors.push({ name: 'name', message: 'Введите наименование объекта' })
+	if (!state.client)
+		errors.push({ name: 'client', message: 'Выберите клиента' })
+	if (!state.phone || state.phone.length < 18)
+		errors.push({ name: 'phone', message: 'Введите корректный телефон' })
+	if (!state.address)
+		errors.push({ name: 'address', message: 'Введите адрес' })
+	if (!state.stuff)
+		errors.push({ name: 'stuff', message: 'Выберите товар' })
+	if (!state.startDate)
+		errors.push({ name: 'startDate', message: 'Укажите дату начала' })
+	if (!state.endDate)
+		errors.push({ name: 'endDate', message: 'Укажите дату окончания' })
+
+	if (state.pic) {
+		const file = state.pic
+		if (file.size > MAX_FILE_SIZE)
+			errors.push({ name: 'pic', message: 'Файл слишком большой, максимум 2MB' })
+		if (!ACCEPTED_IMAGE_TYPES.includes(file.type))
+			errors.push({ name: 'pic', message: 'Недопустимый формат.' })
+	}
+
+	return errors
+}
+
+
+const onPicChange = async (file: File | null) => {
+  state.pic = file;
+  if (!file) return;
+
+  const valid = await checkImageDimensions(file);
+  if (!valid && formRef.value) {
+    // Асинхронно показываем ошибку
+    formRef.value.setErrors([
+      {
+        name: 'pic',
+        message: `Размер изображения должен быть от ${MIN_DIMENSIONS.width}x${MIN_DIMENSIONS.height} до ${MAX_DIMENSIONS.width}x${MAX_DIMENSIONS.height}`,
+      },
+    ]);
+  } else {
+    // Сбрасываем ошибки, если ок
+    formRef.value?.validate();
+  }
+};
+
+
+
 // Actions
-const cancel = () => emit('closePopup')
+const cancel = () => {
+	if (props.action === 'create') del()
+	else emit('closePopup')
+}
 
 const del = () => {
-  if (props.stuff && props.item) {
-    emit('delete', { stuffName: props.stuff.name, item: props.item })
-    emit('closePopup')
-  }
+	if (props.stuff && props.item) {
+		emit('delete', { stuffName: props.stuff.name, item: props.item })
+		emit('closePopup')
+	}
 }
 
 const hasOverlap = (dates: any[], start: string, end: string, exclude?: any) => {
@@ -59,77 +169,179 @@ const hasOverlap = (dates: any[], start: string, end: string, exclude?: any) => 
 }
 
 const save = (e: FormSubmitEvent<typeof state>) => {
-	if (!props.item)
-		return
+	if (!props.item) return
 
-	const { name, status, stuff, startDate, endDate } = e.data
 	const oldStuff = props.stuff
-	const newStuff = props.data.find((d: any) => d.stuff.name === stuff)
+	const newStuff = props.data.find((d: any) => d.stuff.name === e.data.stuff)
+	if (!newStuff) return
 
-	if (!newStuff)
-		return
-
-	// проверка пересечений
-	if (hasOverlap(newStuff.stuff.dates, startDate, endDate, props.item)) {
+	// Проверка пересечений
+	if (hasOverlap(newStuff.stuff.dates, e.data.startDate, e.data.endDate, props.item)) {
 		showError('Нельзя забронировать выбранный товар на эту дату')
 		return
 	}
 
-	// если выбрали другой stuff → переносим
 	if (oldStuff?.name !== newStuff.stuff.name) {
 		const idx = oldStuff.dates.indexOf(props.item)
-		if (idx !== -1)
-			oldStuff.dates.splice(idx, 1)
+		if (idx !== -1) oldStuff.dates.splice(idx, 1)
 
-		// добавить в новый
 		newStuff.stuff.dates.push({
 			...props.item,
-			name,
-			status,
-			start: startDate,
-			end: endDate
+			...e.data,
+			start: e.data.startDate,
+			end: e.data.endDate
 		})
 	} else {
-		// иначе просто обновляем
-		props.item.name = name
-		props.item.status = status
-		props.item.start = startDate
-		props.item.end = endDate
+		Object.assign(props.item, {
+			...e.data,
+			start: e.data.startDate,
+			end: e.data.endDate
+		})
 	}
 
 	emit('closePopup')
 }
 </script>
 
-
 <template>
 	<UForm
-		:state="state"
-		@submit="save"
+		ref="formRef"
 		class="popup-rental"
+		:state="state"
+		:validate="validate"
+		@submit="save"
 	>
+		<!-- Channel -->
+		<UFormField class="flex items-center justify-between" label="Канал продаж" name="channel">
+			<UInput class="w-[200px]" v-model="state.channel" />
+		</UFormField>
+
 		<!-- Name -->
-		<UFormField class="flex items-center justify-between" label="Наименование" name="name">
+		<UFormField class="flex items-center justify-between" label="Наименование объекта" name="name">
 			<UInput class="w-[200px]" v-model="state.name" />
 		</UFormField>
 
 		<!-- Stuff -->
-		<UFormField class="flex items-center justify-between" label="Товар" name="stuff">
+		<UFormField class="flex items-center justify-between" label="Наименование товара" name="stuff">
 			<USelect class="w-[200px]" v-model="state.stuff" :items="stuffOptions" />
 		</UFormField>
 
+		<!-- Client -->
+		<UFormField class="flex items-center justify-between" label="Имя клиента" name="client">
+			<USelect class="w-[200px]" v-model="state.client" :items="clientOptions" />
+		</UFormField>
+
+		<!-- Phone -->
+		<UFormField class="flex items-center justify-between" label="Teлефон" name="phone">
+			<UInput v-maska="'+7 (###) ###-##-##'" placeholder="+7 (###) ###-##-##" class="w-[200px]" v-model="state.phone" />
+		</UFormField>
+
+		<!-- Secondary contact -->
+		<UFormField class="flex items-center justify-between" label="Доп контакты" name="secondaryContact">
+			<UInput placeholder="Доп контакты" class="w-[200px]" v-model="state.secondaryContact" />
+		</UFormField>
+
+		<!-- Address -->
+		<UFormField class="flex items-center justify-between" label="Адрес" name="address">
+			<UInput placeholder="Адрес" class="w-[200px]" v-model="state.address" />
+		</UFormField>
+
+		<!-- Delivery -->
+		<UFormField class="flex items-center justify-between" label="Стоимость доставки" name="delivery">
+			<UInput placeholder="Стоимость доставки" class="w-[200px]" v-model="state.delivery" />
+		</UFormField>
+
+		<!-- Discount -->
+		<UFormField class="flex items-center justify-between" label="Скидка" name="discount">
+			<UInput placeholder="Cкидка" class="w-[200px]" v-model="state.discount" />
+		</UFormField>
+
 		<!-- Status -->
-		<UFormField class="flex items-center justify-between" label="Статус" name="status">
+		<UFormField class="flex items-center justify-between" label="Выбрать тип оплаты" name="status">
 			<URadioGroup class="w-[200px]" v-model="state.status" :items="statusOptions" />
 		</UFormField>
 
-		<!-- Даты -->
-		<UFormField class="flex items-center justify-between" label="Дата начала" name="startDate">
-			<UInput type="datetime-local" class="w-[200px]" v-model="state.startDate" />
+		<!-- Deposit -->
+		<UFormField class="flex items-center justify-between" label="Залог" name="deposit">
+			<UInput placeholder="Залог" class="w-[200px]" v-model="state.deposit" />
 		</UFormField>
 
-		<UFormField class="flex items-center justify-between" label="Дата окончания" name="endDate">
-			<UInput type="time" class="w-[200px]" v-model="state.endDate" />
+		<!-- Pic -->
+		<UFormField
+			class="flex items-center justify-between"
+			label="Фото состояния"
+			name="pic"
+			@update:model-value="onPicChange"
+		>
+			  <UFileUpload
+					v-model="state.pic"
+					v-slot="{ open, removeFile }"
+					class="w-[200px]"
+				>
+				<div class="flex gap-2">
+					<UButton
+						:label="state.pic ? 'Изменить' : 'Загрзить'"
+						color="neutral"
+						variant="outline"
+						class="w-[200px] justify-center"
+						@click="open()"
+					/>
+					<UAvatar
+						class="rounded-[2px]"
+						size="lg"
+						:src="state.pic ? createObjectUrl(state.pic) : undefined"
+						icon="i-lucide-image"
+					/>
+				</div>
+				<p v-if="state.pic" class="text-xs text-muted mt-1.5">
+					<span class="mr-1.5">{{ formattedFileName(state.pic.name) }}</span>
+					<UButton
+						label="Удалить"
+						color="error"
+						variant="link"
+						size="xs"
+						class="p-0"
+						@click="removeFile()"
+					/>
+				</p>
+			  </UFileUpload>
+		</UFormField>
+
+		<!-- Kit Notes -->
+		<UFormField
+			class="flex items-center justify-between"
+			label="Заметки о комплекте"
+			name="kitNotes"
+		>
+			<UTextarea v-model="state.kitNotes" autoresize class="w-[200px]" />
+		</UFormField>
+
+		<!-- Даты -->
+		<UFormField
+			class="flex items-center justify-between"
+			label="Дата начала"
+			name="startDate"
+		>
+			<UInput
+				v-model="state.startDate"
+				@update:model-value="handleDateInput('startDate', $event)"
+				type="datetime-local"
+				step="3600" class="w-[200px]"
+			/>
+		</UFormField>
+
+		<UFormField
+			class="flex items-center justify-between"
+			label="Дата окончания"
+			name="endDate"
+		>
+			<UInput
+				v-model="state.endDate"
+				@update:model-value="handleDateInput('endDate', $event)"
+				type="datetime-local"
+				step="3600"
+				class="w-[200px] flex flex-col justify-end"
+			/>
 		</UFormField>
 
 		<div class="flex justify-between mt-6">
@@ -146,11 +358,12 @@ const save = (e: FormSubmitEvent<typeof state>) => {
 .popup-rental
 {
 	height: auto;
-	width: 400px;
+	width: 500px;
+	overflow: auto;
 	padding: 30px 26px 20px 26px;
 	background-color: white;
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
-	}
+	gap: 10px;
+}
 </style>

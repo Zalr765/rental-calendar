@@ -1,5 +1,7 @@
 const ROW_HEIGHT = 119
 const MS_IN_DAY  = 1000 * 60 * 60 * 24
+const MS_IN_HOUR = 1000 * 60 * 60
+
 
 export const useDrag = (
 	items: Ref<any[]>,
@@ -29,8 +31,7 @@ export const useDrag = (
 		if (!view)
 			return
 
-		if (e.detail === 2)
-		{
+		if (e.detail === 2) {
 			emit('openPopup', { item: item, stuff: stuff.value, action: 'edit' })
 			return
 		}
@@ -66,59 +67,75 @@ export const useDrag = (
 		window.addEventListener('pointerup', onMouseUp)
 	}
 
-	const onMouseMove = (e: PointerEvent) => {
-		if (draggingIndex.value === null)
-			return;
 
-		const view = items.value[draggingIndex.value];
-		if (!view || !containerRef.value)
-			return;
+const onMouseMove = (e: PointerEvent) => {
+	if (draggingIndex.value === null)
+		return;
 
-		const src = stuff.value?.dates?.[view.srcIndex];
-		if (!src)
-			return;
+	const view = items.value[draggingIndex.value];
+	if (!view || !containerRef.value)
+		return;
 
-		// --- движение по X ---
-		const deltaX = e.clientX - startX;
-		const newLeft = Math.min(Math.max(startLeft + deltaX, 0), 1000 - view.width);
+	const src = stuff.value?.dates?.[view.srcIndex];
+	if (!src)
+		return;
 
-		const { start, end } = getRange();
-		const newStart = new Date(start.getTime() + (newLeft / cellWidth.value) * MS_IN_DAY);
-		const duration = new Date(src.end).getTime() - new Date(src.start).getTime();
-		const newEnd   = new Date(newStart.getTime() + duration);
+	const { start, end } = getRange();
 
-		newStart.setMinutes(0,0,0);
-		newEnd.setMinutes(0,0,0);
+	const deltaX = e.clientX - startX;
+	const newLeft = Math.min(Math.max(startLeft + deltaX, 0), 1000 - view.width);
 
-		// if (newStart < start || newEnd > end) {
-		// 	showError();
-		// 	return;
-		// }
+	const rangeDuration = end.getTime() - start.getTime();
+	const isSingleDay = rangeDuration < MS_IN_DAY * 1.1;
 
-		src.start = newStart.toISOString();
-		src.end   = newEnd.toISOString();
+	const origStart = origStartISO ? new Date(origStartISO) : new Date(src.start);
+	const duration = new Date(src.end).getTime() - new Date(src.start).getTime();
+	let newStart: Date;
 
-		// --- движение по Y с ограничением ---
-		const rect		= containerRef.value.getBoundingClientRect();
-		const relativeY = e.clientY - rect.top + containerRef.value.scrollTop;
-		let rowIndex	= Math.floor(relativeY / ROW_HEIGHT);
+	if (isSingleDay) {
+		const hoursFromStart = (newLeft - startLeft) / cellWidth.value;
+		const minutesOffset = hoursFromStart * 60;
+		const snappedMinutes = Math.round(minutesOffset / 10) * 10;
 
-		// Определяем мин и макс значение
-		const sourceRowIndex  = props.dragging?.value?.sourceRowIndex ?? 0;
-		const currentRowIndex = props.dragging?.value?.currentRowIndex ?? 0;
-
-		const minTop = (0 - sourceRowIndex) * (ROW_HEIGHT + 1) + 40;
-		const maxTop = (props.tableLength - 1 - sourceRowIndex) * (ROW_HEIGHT + 1) + 40;
-
-		let newTop = rowIndex * ROW_HEIGHT + 40 + (currentRowIndex - sourceRowIndex);
-		if (newTop < minTop)
-			newTop = minTop;
-		if (newTop > maxTop)
-			newTop = maxTop;
-
-		src.__top = newTop;
-		src.__rowIndex = rowIndex;
+		newStart = new Date(origStart.getTime() + snappedMinutes * 60 * 1000);
 	}
+	else {
+		const daysFromStart = (newLeft - startLeft) / cellWidth.value;
+		const hoursOffset = Math.round(daysFromStart * 24);
+
+		newStart = new Date(origStart.getTime() + hoursOffset * MS_IN_HOUR);
+		newStart.setMinutes(origStart.getMinutes(), origStart.getSeconds(), origStart.getMilliseconds());
+	}
+
+	let newEnd = new Date(newStart.getTime() + duration);
+
+	if (newEnd >= end) {
+		newEnd.setHours(0, 0, 0, 0);
+	}
+
+	src.start = newStart.toISOString();
+	src.end = newEnd.toISOString();
+
+	// --- движение по Y ---
+	const rect = containerRef.value.getBoundingClientRect();
+	const relativeY = e.clientY - rect.top + containerRef.value.scrollTop;
+	let rowIndex = Math.floor(relativeY / ROW_HEIGHT);
+
+	const sourceRowIndex = props.dragging?.value?.sourceRowIndex ?? 0;
+	const currentRowIndex = props.dragging?.value?.currentRowIndex ?? 0;
+
+	const minTop = (0 - sourceRowIndex) * (ROW_HEIGHT + 1) + 40;
+	const maxTop = (props.tableLength - 1 - sourceRowIndex) * (ROW_HEIGHT + 1) + 40;
+
+	let newTop = rowIndex * ROW_HEIGHT + 40 + (currentRowIndex - sourceRowIndex);
+	if (newTop < minTop) newTop = minTop;
+	if (newTop > maxTop) newTop = maxTop;
+
+	src.__top = newTop;
+	src.__rowIndex = rowIndex;
+};
+
+
 
 	const onMouseUp = () => {
 		if (draggingIndex.value !== null) {

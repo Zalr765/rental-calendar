@@ -23,6 +23,7 @@ const props = defineProps({
 	align-items: center;
 	font-size: 14px;
 	white-space: nowrap;
+	user-select: none;
 	img
 	{
 		margin-bottom: 7px;
