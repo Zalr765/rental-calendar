@@ -5,6 +5,15 @@ const props = defineProps({
 		type: Object,
 		default: () => ({ start: '', end: '' }),
 	},
+	extraRange: {
+		type: Object,
+		default: () => ({ start: '', end: '' }),
+	},
+	hiddenDays: {
+		type: Number,
+		required: false,
+		default: 0,
+	},
 	row: {
 		type: Object,
 	},
@@ -23,34 +32,35 @@ const MS_IN_DAY  = 1000 * 60 * 60 * 24
 
 const stuff = computed(() => props.row?.getValue('stuff'))
 
+const containerWidth = 1000
+
 const cellWidth = computed(() => {
 	if (!props.range?.start || !props.range?.end)
-		return 33.3
+		return containerWidth / 31
 
-	const start = new Date(props.range.start)
-	const end = new Date(props.range.end)
-	const days = (end.getTime() - start.getTime()) / MS_IN_DAY;
 	const isSingleDay = new Date(props.range.start).toDateString() === new Date(props.range.end).toDateString();
-
 	if(isSingleDay)
 		return 40.27
-	if (days <= 7)
-		return 142.8
-	if (days <= 14)
-		return 71.4
-	return 33.3
+
+	const start = new Date(props.range.start);
+	const end   = new Date(props.range.end);
+
+	const daysCount = Math.floor((end.getTime() - start.getTime()) / MS_IN_DAY) + 1
+
+	return containerWidth / daysCount
 })
+
 
 const items = computed(() => {
 	if (!stuff.value)
 		return []
-	const rangeStart = new Date(new Date(props.range.start).getTime() + 1)
-	const rangeEnd   = new Date(props.range.end)
+	const rangeStart = new Date(new Date(props.extraRange.start).getTime() + 1)
+	const rangeEnd   = new Date(props.extraRange.end)
 
 	return (stuff.value.dates || []).map((date: any, srcIndex: number) => {
-		const dateStart = new Date(date.start);
-		const dateEnd   = new Date(date.end || date.start);
-		const isSingleDay = new Date(props.range.start).toDateString() === new Date(props.range.end).toDateString();
+		const dateStart   = new Date(date.start);
+		const dateEnd     = new Date(date.end || date.start);
+		const isSingleDay = new Date(props.extraRange.start).toDateString() === new Date(props.range.end).toDateString();
 
 
 		if (dateEnd < rangeStart || dateStart > rangeEnd)
@@ -62,6 +72,7 @@ const items = computed(() => {
 		const endTime   = Math.min(dateEnd.getTime(), rangeEnd.getTime())
 
 		const left = ((startTime - rangeStart.getTime()) / unit) * cellWidth.value;
+
 		let width  = ((endTime - startTime) / unit) * cellWidth.value;
 
 		if (width < 2)
@@ -114,17 +125,18 @@ const emit = defineEmits<{
 	(e: 'dragend', payload: number): void
 	(e: 'openPopup', payload?: any): void
 	(e: 'closePopup'): void
+	(e: 'addDay'): void
 }>()
 
 // --- DRAG ---
 const { containerRef, onMouseDown, onContainerEnter } = useDrag(items, cellWidth, props, emit, stuff)
 
 // --- RESIZE ---
-const { onResizeDown } = useResize(items,cellWidth, props, stuff)
+const { onResizeDown } = useResize(items,cellWidth, props, stuff, () => emit('addDay'))
 
 // Creating
 const { onContainerDown, onContainerUp, onContainerMove, onContainerDblClick } =
-	useRentalCreate(cellWidth, props, stuff, (payload: any) => emit('openPopup', payload))
+	useRentalCreate(cellWidth, props, stuff, (payload: any) => emit('openPopup', payload), () => emit('addDay'))
 
 // formatter
 const getDuration = (start: Date, end: Date) => {
@@ -156,8 +168,7 @@ const reference = computed(() => ({
 		@dblclick="onContainerDblClick"
 		@mousedown="onContainerDown"
 		@mouseenter="onContainerEnter"
-	>
-		<div
+	>		<div
 			v-if="todayLineLeft !== null"
 			class="ui-drag-resize__today-line"
 			:style="{ left: todayLineLeft + 'px' }"
@@ -200,7 +211,7 @@ const reference = computed(() => ({
 {
 	position: absolute;
 	height: 119px;
-	width: 1000px;
+	width: 2000px;
 	top: 0;
 	left: 0;
 	z-index: 1;

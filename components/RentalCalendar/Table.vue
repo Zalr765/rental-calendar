@@ -63,19 +63,21 @@ const data = ref([
 	},
 ]);
 
-function normalizeDate(date: string | Date | undefined | null) {
-  if (!date) return null
+const normalizeDate = (date: string | Date | undefined | null) => {
+	if (!date)
+		return null
 
-  const d = typeof date === "string" ? new Date(date) : date
-  if (isNaN(d.getTime())) return null
+	const d = typeof date === "string" ? new Date(date) : date
+	if (isNaN(d.getTime()))
+		return null
 
-  // убираем секунды и миллисекунды, оставляем YYYY-MM-DDTHH:mm
-  return d.toISOString().slice(0, 16)
+	return d.toISOString().slice(0, 16)
 }
 
 
 const onDelete = ({ stuffName, item }: { stuffName: string; item: any }) => {
 	const target = data.value.find((d: any) => d.stuff.name === stuffName)
+
 	if (!target)
 		return
 
@@ -94,8 +96,25 @@ const { currentDrag, onDragStart, onDragEnter, onDragEnd } = useRentalDrag(data)
 
 // Popup
 const rentalPopup = useRentalPopup();
+const afterClose = ()=> {
+	if (rentalPopup.actionType.value === 'create')
+		onDelete({ stuffName: rentalPopup.stuff.value.name, item: rentalPopup.item.value })}
 
-// Table columns
+// Column
+const visibleHiddenCount = ref(0);
+watch(
+	() => props.range,
+	() => {
+		visibleHiddenCount.value = 0
+	},
+	{ deep: true }
+)
+
+const showNextHiddenDay = (extraCount : number)=> {
+	visibleHiddenCount.value += extraCount
+}
+
+
 const columns = computed(() =>
 	useCalendarColumns(
 		props.range.start,
@@ -108,7 +127,9 @@ const columns = computed(() =>
 		onDragEnter,
 		onDragEnd,
 		rentalPopup.openPopup,
-		rentalPopup.closePopup
+		rentalPopup.closePopup,
+		showNextHiddenDay,
+		visibleHiddenCount,
 	)
 );
 </script>
@@ -116,6 +137,7 @@ const columns = computed(() =>
 <template>
 	<div class="rental-calendar-table">
 		<UTable
+			ref="tableWrapper"
 			class="flex-1 max-h-[527px] border-collapse z-10"
 			sticky
 			:data="data"
@@ -125,7 +147,8 @@ const columns = computed(() =>
 			v-model:open="rentalPopup.open.value"
 			title="Rental popup"
 			description="Детали выбранной аренды"
-			:ui="{ content: 'w-fit' }"
+			:ui="{ content: 'w-[570px] max-w-full' }"
+			@after:leave="afterClose"
 		>
 			<template #content>
 				<PopupRental
@@ -134,7 +157,7 @@ const columns = computed(() =>
 					:item="rentalPopup.item.value"
 					:action="rentalPopup.actionType.value"
 					@delete="onDelete"
-					@closePopup="rentalPopup.closePopup"
+					@closePopup="()=> rentalPopup.open.value = false"
 				/>
 			</template>
 			<template #footer>

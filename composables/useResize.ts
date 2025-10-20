@@ -6,7 +6,8 @@ export const useResize = (
 	items: Ref<any[]>,
 	cellWidth: Ref<number>,
 	props: any,
-	stuff: Ref<any>
+	stuff: Ref<any>,
+	addColumn: any,
 ) => {
 	const { showError } = useAppToast()
 	const resizingSrcIndex = ref<number | null>(null)
@@ -19,6 +20,18 @@ export const useResize = (
 	let baseEndMs    = 0
 	let prevLeft     = 0
 	let accumHours   = 0
+
+	const getRange = () => {
+		const start = new Date(props.range.start)
+		const end = new Date(props.range.end)
+
+		const extraOffset = props.hiddenDays ?? 0
+		const isSingleDay = end.getTime() - start.getTime() < MS_IN_DAY * 1.1
+
+		end.setTime(end.getTime() +1 + extraOffset * (isSingleDay ? MS_IN_HOUR : MS_IN_DAY))
+
+		return { start, end }
+	}
 
 	const cleanup = () => {
 		resizingSrcIndex.value = null
@@ -46,7 +59,7 @@ export const useResize = (
 			prevEndMs    = new Date(src.end).getTime()
 			prevLeft     = view.left ?? 0
 
-			const rangeEndMs = new Date(props.range.end).getTime() + 1
+			const rangeEndMs = new Date(props.extraRange.end).getTime() + 1
 			accumHours = 0
 			baseEndMs  = Math.min(prevEndMs, rangeEndMs)
 
@@ -61,10 +74,10 @@ export const useResize = (
 		if (!src)
 			return
 
-		const rangeStartMs = new Date(props.range.start).getTime()
-		const rangeEndMs   = new Date(props.range.end).getTime() + 1
+		const rangeStartMs  = new Date(props.range.start).getTime()
+		const rangeEndMs    = new Date(props.extraRange.end).getTime() + 1
 		const rangeDuration = rangeEndMs - rangeStartMs
-		const isSingleDay = rangeDuration < MS_IN_DAY * 1.1
+		const isSingleDay   = rangeDuration < MS_IN_DAY * 1.1
 
 		const stepMs   = isSingleDay ? 10 * MS_IN_MINUTE : MS_IN_HOUR
 		const unitPx   = isSingleDay ? cellWidth.value / 6 : cellWidth.value / 24
@@ -102,10 +115,18 @@ export const useResize = (
 				newEndMs = rangeEndMs
 		}
 
-		src.end = new Date(newEndMs).toISOString()
-		accumHours = stepsMoved
-	}
+		src.end = new Date(newEndMs).toISOString();
+		accumHours = stepsMoved;
 
+		if (newEndMs >= new Date(getRange().end).getTime())
+			addColumn()
+		if(newEndMs >= new Date(props.range.end).getTime() + 1)
+		{
+			const container = document.querySelector('.rental-calendar-table .flex-1') as HTMLElement | null
+			if (container)
+				container.scrollLeft += 1000
+		}
+	}
 
 	const onResizeUp = () => {
 			if (resizingSrcIndex.value !== null) {

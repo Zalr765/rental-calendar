@@ -11,7 +11,7 @@ const props = defineProps<{
 }>()
 
 // Const
-const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
+const MAX_FILE_SIZE = 2 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 const MIN_DIMENSIONS = { width: 200, height: 200 }
 const MAX_DIMENSIONS = { width: 4096, height: 4096 }
@@ -47,7 +47,7 @@ const emit = defineEmits<{
 	(e: 'delete', payload: { stuffName: string; item: any }): void
 }>()
 
-const { showError } = useAppToast()
+const { showError, showSuccess } = useAppToast();
 
 // Options
 const stuffOptions = computed(() =>
@@ -106,15 +106,19 @@ const validate = (state: any): FormError[] => {
 		errors.push({ name: 'address', message: 'Введите адрес' })
 	if (!state.stuff)
 		errors.push({ name: 'stuff', message: 'Выберите товар' })
-	if (!state.startDate)
-		errors.push({ name: 'startDate', message: 'Укажите дату начала' })
-	if (!state.endDate)
-		errors.push({ name: 'endDate', message: 'Укажите дату окончания' })
+
+
+	if (state.startDate && state.endDate) {
+		const start = new Date(state.startDate)
+		const end = new Date(state.endDate)
+		if (end <= start)
+			errors.push({ name: 'endDate', message: 'Неверная дата' })
+	}
 
 	if (state.pic) {
 		const file = state.pic
 		if (file.size > MAX_FILE_SIZE)
-			errors.push({ name: 'pic', message: 'Файл слишком большой, максимум 2MB' })
+			errors.push({ name: 'pic', message: 'Максимум 2MB' })
 		if (!ACCEPTED_IMAGE_TYPES.includes(file.type))
 			errors.push({ name: 'pic', message: 'Недопустимый формат.' })
 	}
@@ -124,30 +128,27 @@ const validate = (state: any): FormError[] => {
 
 
 const onPicChange = async (file: File | null) => {
-  state.pic = file;
-  if (!file) return;
+	state.pic = file;
+	if (!file)
+		return;
 
-  const valid = await checkImageDimensions(file);
-  if (!valid && formRef.value) {
-    // Асинхронно показываем ошибку
-    formRef.value.setErrors([
-      {
-        name: 'pic',
-        message: `Размер изображения должен быть от ${MIN_DIMENSIONS.width}x${MIN_DIMENSIONS.height} до ${MAX_DIMENSIONS.width}x${MAX_DIMENSIONS.height}`,
-      },
-    ]);
-  } else {
-    // Сбрасываем ошибки, если ок
-    formRef.value?.validate();
-  }
+	const valid = await checkImageDimensions(file);
+	if (!valid && formRef.value) {
+		formRef.value.setErrors([
+		{
+			name: 'pic',
+			message: `Размер изображения должен быть от ${MIN_DIMENSIONS.width}x${MIN_DIMENSIONS.height} до ${MAX_DIMENSIONS.width}x${MAX_DIMENSIONS.height}`,
+		},
+		]);
+	}
+	else {
+		formRef.value?.validate();
+	}
 };
-
-
 
 // Actions
 const cancel = () => {
-	if (props.action === 'create') del()
-	else emit('closePopup')
+		emit('closePopup')
 }
 
 const del = () => {
@@ -161,7 +162,8 @@ const hasOverlap = (dates: any[], start: string, end: string, exclude?: any) => 
 	const startMs = new Date(start).getTime()
 	const endMs = new Date(end).getTime()
 	return dates.some(d => {
-		if (exclude && d === exclude) return false
+		if (exclude && d === exclude)
+			return false
 		const dStart = new Date(d.start).getTime()
 		const dEnd = new Date(d.end).getTime()
 		return !(endMs <= dStart || startMs >= dEnd)
@@ -173,13 +175,16 @@ const save = (e: FormSubmitEvent<typeof state>) => {
 
 	const oldStuff = props.stuff
 	const newStuff = props.data.find((d: any) => d.stuff.name === e.data.stuff)
-	if (!newStuff) return
+	if (!newStuff)
+		return
 
 	// Проверка пересечений
 	if (hasOverlap(newStuff.stuff.dates, e.data.startDate, e.data.endDate, props.item)) {
 		showError('Нельзя забронировать выбранный товар на эту дату')
 		return
 	}
+	else
+		showSuccess('Объект успешно забронирован!')
 
 	if (oldStuff?.name !== newStuff.stuff.name) {
 		const idx = oldStuff.dates.indexOf(props.item)
@@ -191,7 +196,8 @@ const save = (e: FormSubmitEvent<typeof state>) => {
 			start: e.data.startDate,
 			end: e.data.endDate
 		})
-	} else {
+	}
+	else {
 		Object.assign(props.item, {
 			...e.data,
 			start: e.data.startDate,
@@ -279,13 +285,15 @@ const save = (e: FormSubmitEvent<typeof state>) => {
 					class="w-[200px]"
 				>
 				<div class="flex gap-2">
-					<UButton
-						:label="state.pic ? 'Изменить' : 'Загрзить'"
-						color="neutral"
-						variant="outline"
-						class="w-[200px] justify-center"
-						@click="open()"
-					/>
+					<UTooltip :delay-duration="0" text="Размер не должен превышать 2MB">
+						<UButton
+							:label="state.pic ? 'Изменить' : 'Загрзить'"
+							color="neutral"
+							variant="outline"
+							class="w-[200px] justify-center"
+							@click="open()"
+						/>
+					</UTooltip>
 					<UAvatar
 						class="rounded-[2px]"
 						size="lg"
@@ -295,14 +303,14 @@ const save = (e: FormSubmitEvent<typeof state>) => {
 				</div>
 				<p v-if="state.pic" class="text-xs text-muted mt-1.5">
 					<span class="mr-1.5">{{ formattedFileName(state.pic.name) }}</span>
-					<UButton
-						label="Удалить"
-						color="error"
-						variant="link"
-						size="xs"
-						class="p-0"
-						@click="removeFile()"
-					/>
+						<UButton
+							label="Удалить"
+							color="error"
+							variant="link"
+							size="xs"
+							class="p-0"
+							@click="removeFile()"
+						/>
 				</p>
 			  </UFileUpload>
 		</UFormField>
@@ -358,7 +366,7 @@ const save = (e: FormSubmitEvent<typeof state>) => {
 .popup-rental
 {
 	height: auto;
-	width: 500px;
+	width: 100%;
 	overflow: auto;
 	padding: 30px 26px 20px 26px;
 	background-color: white;

@@ -29,27 +29,36 @@ export const useCalendarColumns = (
 	dragEnter: (rowIndex: number) => void,
 	dragEnd: () => void,
 	openPopup: (payload?: any) => void,
-	closePopup: () => void
+	closePopup: () => void,
+	addDay: (extraCount: number) => void,
+	visibleHiddenCount: Ref<number>,
 ) => {
 	const isSingleDay = start.toDateString() === end.toDateString()
 
-	const rangeDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-	let extraDays = 0
+	const rangeCount = isSingleDay
+		? Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60))
+		: Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
 
+	let extraCount = 0
 	if (isSingleDay)
-		extraDays = 0.5
-	else if (rangeDays <= 7)
-		extraDays = 4
-	else if (rangeDays <= 31)
-		extraDays = 15
+		extraCount = 24
+	else if (rangeCount <= 7)
+		extraCount = 4
+	else if (rangeCount <= 31)
+		extraCount = 15
 	else
-		extraDays = Math.ceil(rangeDays * 2);
+		extraCount = Math.ceil(rangeCount * 2)
 
-	// расширяем диапазон справа
-	// const extendedEnd = new Date(end.getTime() + extraDays * 24 * 60 * 60 * 1000)
+	const extendedEnd = new Date(
+		end.getTime() + extraCount * (isSingleDay ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000)
+	)
 
+	const days = getDaysInRange(start, extendedEnd, isSingleDay ? 'hour' : 'day')
 
-	const days = getDaysInRange(start, end, isSingleDay ? 'hour' : 'day')
+	const addColumn = () => {
+		if(extraCount > visibleHiddenCount?.value)
+			addDay(extraCount)
+	}
 
 	const columns: TableColumn<CalendarRow>[] = [
 		{
@@ -66,12 +75,14 @@ export const useCalendarColumns = (
 			meta: {
 				class: {
 					th: 'min-w-[155px] w-[155px]',
-					td: 'h-[120px] py-[10px] px-[0]	',
+					td: 'h-[120px] py-[10px] px-[0]',
 				},
 			},
 		},
 		...days.map((day, i) => {
-			const isHidden = i >= rangeDays;
+			const isHidden = i >= rangeCount
+			const hiddenIndex = i - rangeCount
+			const shouldHide = isHidden && hiddenIndex >= (visibleHiddenCount?.value ?? 0)
 
 			return {
 				accessorKey: `day${i}`,
@@ -80,14 +91,17 @@ export const useCalendarColumns = (
 					i === 0
 						? h(dragResize, {
 								range: { start, end },
+								extraRange: { start, end: extendedEnd },
 								row,
 								tableLength,
 								dragging: currentDrag,
+								hiddenDays: visibleHiddenCount?.value,
 								onDragstart: dragStart,
 								onDragenter: dragEnter,
 								onDragend: dragEnd,
 								onOpenPopup: openPopup,
 								onclosePopup: closePopup,
+								onAddDay: addColumn,
 						  })
 						: ' ',
 				meta: {
@@ -97,25 +111,15 @@ export const useCalendarColumns = (
 							${days.length === 14
 								? 'w-[71.4px] whitespace-normal'
 								: days.length > 14
-								? 'w-[33.3px] whitespace-pre'
-								: 'w-[142.2px] whitespace-normal'}
+								? 'min-w-[31px] whitespace-pre'
+								: 'min-w-[142.77px] whitespace-normal'}
+							${shouldHide ? 'w-0 p-0 m-0 overflow-hidden hidden' : ''}
 						`,
-						// th: `
-						// 	text-[12px] text-center box-border px-[0]
-						// 	${days.length === 14
-						// 		? 'w-[71.4px] whitespace-normal'
-						// 		: days.length > 14
-						// 		? 'w-[33.3px] whitespace-pre'
-						// 		: 'w-[142.2px] whitespace-normal'}
-						// 	// ${isHidden ? 'opacity-30 bg-[#fafafa]' : ''}
-						// `,
 						td: `
+							p-0
 							${(i + 1) % 7 === 6 || (i + 1) % 7 === 0 ? 'bg-[#f9f9f9]' : ''}
+							${shouldHide ? 'w-0 p-0 m-0 overflow-hidden hidden' : ''}
 						`,
-						// td: `
-						// 	p-0 ${isHidden ? 'opacity-30 bg-[#fafafa]' : ''}
-						// 	${(i + 1) % 7 === 6 || (i + 1) % 7 === 0 ? 'bg-[#f9f9f9]' : ''}
-						// `,
 					},
 				},
 			}

@@ -7,6 +7,7 @@ export const useRentalCreate = (
 	props: any,
 	stuff: Ref<any>,
 	openPopup: any,
+	addColumn: any,
 ) => {
 	const { showError } = useAppToast()
 	const creating = ref(false)
@@ -23,12 +24,25 @@ export const useRentalCreate = (
 		window.removeEventListener('mouseup', onContainerUp)
 	}
 
+
+	const getRange = () => {
+		const start = new Date(props.range.start)
+		const end = new Date(props.range.end)
+
+		const extraOffset = props.hiddenDays ?? 0
+		const isSingleDay = end.getTime() - start.getTime() < MS_IN_DAY * 1.1
+
+		end.setTime(end.getTime() +1 + extraOffset * (isSingleDay ? MS_IN_HOUR : MS_IN_DAY))
+
+		return { start, end }
+	}
+
 	const onContainerDown = (e: MouseEvent) => {
 		if ((e.target as HTMLElement).closest('.ui-drag-resize__item'))
 			return
 
 		const rangeStart    = new Date(props.range.start)
-		const rangeEnd      = new Date(props.range.end)
+		const rangeEnd      = new Date(props.extraRange.end)
 		const rangeDuration = rangeEnd.getTime()+1 - rangeStart.getTime()
 		const isSingleDay   = rangeDuration < MS_IN_DAY * 1.1
 
@@ -59,7 +73,7 @@ export const useRentalCreate = (
 			return
 
 		const rangeStart = new Date(props.range.start)
-		const rangeEnd   = new Date(props.range.end)
+		const rangeEnd   = new Date(props.extraRange.end)
 		const rangeDuration = rangeEnd.getTime() - rangeStart.getTime()
 		const isSingleDay = rangeDuration < MS_IN_DAY * 1.1
 
@@ -92,9 +106,7 @@ export const useRentalCreate = (
 			if (item.end.getTime() - createAnchorDate.getTime() < MS_IN_HOUR)
 				item.end = new Date(createAnchorDate.getTime() + MS_IN_HOUR)
 			if (item.end > rangeEnd.getTime() + 1)
-			{
 				item.end = new Date(rangeEnd)
-			}
 		}
 		else {
 			item.start = new Date(createAnchorDate.getTime() + stepsMoved * stepMs)
@@ -103,6 +115,9 @@ export const useRentalCreate = (
 			if (item.start < rangeStart)
 				item.start = new Date(rangeStart)
 		}
+
+		if (item.end >= new Date(getRange().end).getTime())
+			addColumn()
 	}
 
 	const onContainerUp = () => {
