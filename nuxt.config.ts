@@ -8,5 +8,20 @@ export default defineNuxtConfig({
 		public: {
 			defaultLocale: 'ru-RU'
 		}
-	}
+	},
+
+	// Legacy
+	alias: {
+		'@legacy': '/legacy',
+	},
+	vite: {
+		resolve: {
+			alias: {
+				'@legacy': '/legacy',
+			},
+		},
+	},
+	typescript: {
+		strict: false,
+	},
 })

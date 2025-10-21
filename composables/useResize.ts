@@ -76,8 +76,10 @@ export const useResize = (
 
 		const rangeStartMs  = new Date(props.range.start).getTime()
 		const rangeEndMs    = new Date(props.extraRange.end).getTime() + 1
-		const rangeDuration = rangeEndMs - rangeStartMs
-		const isSingleDay   = rangeDuration < MS_IN_DAY * 1.1
+		// const rangeDuration = rangeEndMs - rangeStartMs
+		// const isSingleDay   = rangeDuration < MS_IN_DAY * 1.1
+		const rangeDuration = new Date(props.range.end).getTime() + 1 - new Date(props.range.start).getTime()
+		const isSingleDay = rangeDuration < MS_IN_DAY * 1.1
 
 		const stepMs   = isSingleDay ? 10 * MS_IN_MINUTE : MS_IN_HOUR
 		const unitPx   = isSingleDay ? cellWidth.value / 6 : cellWidth.value / 24

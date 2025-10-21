@@ -97,8 +97,10 @@ const { currentDrag, onDragStart, onDragEnter, onDragEnd } = useRentalDrag(data)
 // Popup
 const rentalPopup = useRentalPopup();
 const afterClose = ()=> {
-	if (rentalPopup.actionType.value === 'create')
-		onDelete({ stuffName: rentalPopup.stuff.value.name, item: rentalPopup.item.value })}
+	if (rentalPopup.actionType.value === 'create' && !rentalPopup.success.value)
+		onDelete({ stuffName: rentalPopup.stuff.value.name, item: rentalPopup.item.value })
+	rentalPopup.success.value = false;
+}
 
 // Column
 const visibleHiddenCount = ref(0);
@@ -156,6 +158,7 @@ const columns = computed(() =>
 					:stuff="rentalPopup.stuff.value"
 					:item="rentalPopup.item.value"
 					:action="rentalPopup.actionType.value"
+					v-model:isSuccess="rentalPopup.success.value"
 					@delete="onDelete"
 					@closePopup="()=> rentalPopup.open.value = false"
 				/>

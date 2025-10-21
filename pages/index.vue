@@ -1,5 +1,12 @@
 <template>
-	<main class="container">
-		<RentalCalendar />
-	</main>
+	<div>
+		<main></main>
+	</div>
 </template>
+
+<style  lang="scss">
+  html
+  {
+    background-color: #FFF;
+  }
+</style>

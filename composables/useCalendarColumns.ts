@@ -104,24 +104,29 @@ export const useCalendarColumns = (
 								onAddDay: addColumn,
 						  })
 						: ' ',
-				meta: {
-					class: {
-						th: `
-							text-[12px] text-center box-border px-[0]
-							${days.length === 14
-								? 'w-[71.4px] whitespace-normal'
-								: days.length > 14
-								? 'min-w-[31px] whitespace-pre'
-								: 'min-w-[142.77px] whitespace-normal'}
-							${shouldHide ? 'w-0 p-0 m-0 overflow-hidden hidden' : ''}
-						`,
-						td: `
-							p-0
-							${(i + 1) % 7 === 6 || (i + 1) % 7 === 0 ? 'bg-[#f9f9f9]' : ''}
-							${shouldHide ? 'w-0 p-0 m-0 overflow-hidden hidden' : ''}
-						`,
-					},
-				},
+						meta: {
+							class: {
+								th: `
+									text-[12px] text-center box-border px-[0]
+									${
+										isSingleDay
+											? 'min-w-[41.63px] whitespace-pre'
+											: days.length === 14
+											? 'w-[71.4px] whitespace-normal'
+											: days.length > 14
+											? 'min-w-[31px] whitespace-pre'
+											: 'min-w-[142.77px] whitespace-normal'
+									}
+									${shouldHide ? 'w-0 p-0 m-0 overflow-hidden hidden' : ''}
+								`,
+								td: `
+									p-0
+									${(i + 1) % 7 === 6 || (i + 1) % 7 === 0 ? 'bg-[#f9f9f9]' : ''}
+									${shouldHide ? 'w-0 p-0 m-0 overflow-hidden hidden' : ''}
+								`,
+							},
+						},
+
 			}
 		}),
 	]

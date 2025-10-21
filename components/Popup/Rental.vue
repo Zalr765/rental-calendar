@@ -7,8 +7,11 @@ const props = defineProps<{
 	data: any,
 	stuff: any,
 	item: any,
-	action: string | null
+	action: string | null,
 }>()
+
+// Models
+const isSuccess = defineModel('isSuccess');
 
 // Const
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
@@ -184,7 +187,10 @@ const save = (e: FormSubmitEvent<typeof state>) => {
 		return
 	}
 	else
+	{
+		isSuccess.value = true;
 		showSuccess('Объект успешно забронирован!')
+	}
 
 	if (oldStuff?.name !== newStuff.stuff.name) {
 		const idx = oldStuff.dates.indexOf(props.item)

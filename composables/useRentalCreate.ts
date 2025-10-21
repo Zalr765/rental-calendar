@@ -43,16 +43,18 @@ export const useRentalCreate = (
 
 		const rangeStart    = new Date(props.range.start)
 		const rangeEnd      = new Date(props.extraRange.end)
-		const rangeDuration = rangeEnd.getTime()+1 - rangeStart.getTime()
-		const isSingleDay   = rangeDuration < MS_IN_DAY * 1.1
-
+		const rangeDuration = new Date(props.range.end).getTime() - new Date(props.range.start).getTime()
+		const isSingleDay = rangeDuration < MS_IN_DAY * 1.1
 		createStartX = e.clientX
 
 		if (isSingleDay) {
+			console.log(12321);
+
 			const hourWidth = cellWidth.value;
 			const hoursFromStart = Math.floor(e.offsetX / hourWidth);
 			createAnchorDate = new Date(rangeStart)
 			createAnchorDate.setHours(hoursFromStart, 0, 0, 0)
+
 		}
 		else {
 			const offsetDays = (e.offsetX / cellWidth.value) * MS_IN_DAY
@@ -74,7 +76,7 @@ export const useRentalCreate = (
 
 		const rangeStart = new Date(props.range.start)
 		const rangeEnd   = new Date(props.extraRange.end)
-		const rangeDuration = rangeEnd.getTime() - rangeStart.getTime()
+		const rangeDuration = new Date(props.range.end).getTime() - new Date(props.range.start).getTime()
 		const isSingleDay = rangeDuration < MS_IN_DAY * 1.1
 
 		const deltaPx = e.clientX - createStartX

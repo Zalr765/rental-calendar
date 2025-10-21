@@ -40,7 +40,7 @@ const cellWidth = computed(() => {
 
 	const isSingleDay = new Date(props.range.start).toDateString() === new Date(props.range.end).toDateString();
 	if(isSingleDay)
-		return 40.27
+		return 41.63
 
 	const start = new Date(props.range.start);
 	const end   = new Date(props.range.end);

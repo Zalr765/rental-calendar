@@ -9,6 +9,7 @@ export const useRentalPopup = (modelValue?: Ref<boolean>) => {
 	const stuff = ref<any | null>(null)
 	const item = ref<any | null>(null)
 	const actionType = ref<string | null>(null)
+	const success = ref<boolean>(false)
 
 	const openPopup = (options?: RentalPopupOptions) => {
 		stuff.value = options?.stuff ?? null
@@ -24,5 +25,5 @@ export const useRentalPopup = (modelValue?: Ref<boolean>) => {
 		actionType.value = null
 	}
 
-	return { open, stuff, item, actionType, openPopup, closePopup }
+	return { open, stuff, item, actionType, success, openPopup, closePopup }
 }
