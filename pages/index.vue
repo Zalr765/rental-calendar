@@ -1,6 +1,6 @@
 <template>
 	<div>
-		<main></main>
+		<main>dsa</main>
 	</div>
 </template>
 

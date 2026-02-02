@@ -186,8 +186,7 @@ const save = (e: FormSubmitEvent<typeof state>) => {
 		showError('Нельзя забронировать выбранный товар на эту дату')
 		return
 	}
-	else
-	{
+	else {
 		isSuccess.value = true;
 		showSuccess('Объект успешно забронирован!')
 	}

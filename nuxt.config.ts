@@ -14,6 +14,10 @@ export default defineNuxtConfig({
 	alias: {
 		'@legacy': '/legacy',
 	},
+
+	ui: {
+		fonts: false
+	},
 	vite: {
 		resolve: {
 			alias: {
